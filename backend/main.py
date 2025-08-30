@@ -13,6 +13,7 @@ from pydantic import BaseModel
 import json
 import base64
 from dotenv import load_dotenv
+from google.genai import types
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -79,7 +80,7 @@ class FoodData(BaseModel):
     product_name: str
     ingredients: str = None
     nutri_score: str = None
-    nutrients: list = None
+    nutrients: dict = None
 
 
 @app.post("/analyze-food")
@@ -131,20 +132,23 @@ Do not include any other text.
 
     try:
         # Call Gemini
-        model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
-            system_instruction=system_instruction.strip()
-        )
+        # model = genai.GenerativeModel(
+        #     model_name="gemini-2.5-flash",
+        #     system_instruction=system_instruction.strip()
+        # )
 
-        response = model.generate_content(
-            contents=[
-                image,
-                f"Here is the food item to evaluate:\n{food_json_str}"
-            ]
-        )
+        # response = model.generate_content(
+        #     contents=[
+        #         image,
+        #         f"Here is the food item to evaluate:\n{food_json_str}"
+        #     ]
+        # )
 
         response = client.models.generate_content(
             model="gemini-2.5-flash",
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction
+            ),
             contents=[image, f"Here is the food item to evaluate:\n{food_json_str}"],
         )
 
