@@ -11,6 +11,7 @@ import google as genai
 import os
 from pydantic import BaseModel
 import json
+import base64
 
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -74,10 +75,25 @@ class FoodData(BaseModel):
 
 @app.post("/analyze-food")
 async def analyze_food(food_data: FoodData):
-    if "latest" not in user_lab_results:
-        raise HTTPException(status_code=400, detail="No bloodwork uploaded yet")
+    b64_file_path = "../bloodwork_converted/bloodwork_converted.b64"
+    if not os.path.exists(b64_file_path):
+            raise HTTPException(status_code=400, detail="No bloodwork uploaded yet")
 
-    image = user_lab_results["latest"]
+    try:
+        with open(b64_file_path, "r") as f:
+            base64_str = f.read().strip()
+    except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to read .b64 file: {e}")
+
+    try:
+        # Decode base64 string to bytes
+        image_data = base64.b64decode(base64_str)
+        # Create PIL Image from bytes
+        image = Image.open(io.BytesIO(image_data))
+        user_lab_results["latest"] = image
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to decode image from .b64: {e}")
+    
 
     # Prepare food context
     food_json_str = json.dumps(food_data.dict(), indent=2)

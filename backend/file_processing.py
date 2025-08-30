@@ -35,7 +35,7 @@ def process_file(file_path):
 
         if base64_string:
             file_name = 'bloodwork_converted'
-            output_path = os.path.join("bloodwork_converted", f"{file_name}.b64")
+            output_path = os.path.join("../bloodwork_converted", f"{file_name}.b64")
             print(f"Saving Base64 to: {output_path}")
             with open(output_path, "w") as f:
                 f.write(base64_string)
