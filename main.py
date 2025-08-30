@@ -1,7 +1,34 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 import httpx
+import shutil
+from file_processing import process_file
 
 app = FastAPI()
+
+@app.post("/uploadfile/")
+async def create_upload_file(file: UploadFile = File(...)):
+    print(f"Received file: {file.filename}")
+    temp_path = f"/tmp/{file.filename}"
+    print(f"Saving to temporary path: {temp_path}")
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        print("File saved to temporary path.")
+        processed_file_path = process_file(temp_path)
+        print(f"Processed file path: {processed_file_path}")
+        
+        if processed_file_path:
+            return {"filepath": processed_file_path}
+        else:
+            print("File processing failed: Invalid file type.")
+            raise HTTPException(status_code=400, detail="Invalid file type")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+
+
+
 
 # A reusable async client for making API calls
 # The 'with' statement ensures it's properly closed
