@@ -52,10 +52,10 @@ async def scan_barcode_image(image: UploadFile = File(...)):
     
     useful_data = {
         "barcode": product_data.get("code"),
-        "product_name": product_data.get("product_name_fr") or product_data.get("product_name"),
+        "product_name": product_data.get("product_name_en") or product_data.get("product_name"),
         "brands": product_data.get("brands"),
         "image_url": product_data.get("image_front_url"),
-        "ingredients": product_data.get("ingredients_text_fr") or product_data.get("ingredients_text"),
+        "ingredients": product_data.get("ingredients_text_en") or product_data.get("ingredients_text"),
         "allergens": product_data.get("allergens_hierarchy", []),
         "nutriscore": product_data.get("nutriscore_grade"),
         "nova_group": product_data.get("nova_group"),
