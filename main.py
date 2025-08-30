@@ -3,6 +3,8 @@ import httpx
 import io
 from PIL import Image
 from pyzbar.pyzbar import decode
+import cv2
+import numpy as np
 
 app = FastAPI()
 
@@ -23,27 +25,13 @@ async def get_product_data(barcode: str):
         return data.get("product")
 
 # NEW ENDPOINT: This one accepts an image file upload
-@app.post("/scan/barcode")
+@app.post("/scan")
 async def scan_barcode_image(image: UploadFile = File(...)):
-    # 1. Read the image file sent by the user
-    image_bytes = await image.read()
-    
-    # 2. Use Pillow to open the image from the bytes
-    pil_image = Image.open(io.BytesIO(image_bytes))
-    
-    # 3. Use pyzbar to decode the barcode from the image
-    barcodes = decode(pil_image)
-    
-    if not barcodes:
-        raise HTTPException(status_code=400, detail="No barcode found in the uploaded image.")
-        
-    # 4. Extract the barcode string from the first detected barcode
-    # The data is in bytes, so we decode it to a UTF-8 string
-    barcode_data = barcodes[0].data.decode('utf-8')
-    
-    # --- From here, the logic is the same as before ---
-    
+    barcode_data = await decode_image(image)
+
     product_data = await get_product_data(barcode_data)
+
+    print(barcode_data)
     
     if not product_data:
         raise HTTPException(status_code=404, detail="Product data is empty for the scanned barcode.")
@@ -51,22 +39,60 @@ async def scan_barcode_image(image: UploadFile = File(...)):
     nutriments = product_data.get("nutriments", {})
     
     useful_data = {
-        "barcode": product_data.get("code"),
         "product_name": product_data.get("product_name_en") or product_data.get("product_name"),
         "brands": product_data.get("brands"),
         "image_url": product_data.get("image_front_url"),
         "ingredients": product_data.get("ingredients_text_en") or product_data.get("ingredients_text"),
-        "allergens": product_data.get("allergens_hierarchy", []),
         "nutriscore": product_data.get("nutriscore_grade"),
-        "nova_group": product_data.get("nova_group"),
         "nutriments": {
             "sugars_100g": nutriments.get("sugars_100g"),
             "salt_100g": nutriments.get("salt_100g"),
             "fat_100g": nutriments.get("fat_100g"),
             "saturated_fat_100g": nutriments.get("saturated-fat_100g"),
             "energy_kcal_100g": nutriments.get("energy-kcal_100g")
-        },
-        "analysis_tags": product_data.get("ingredients_analysis_tags", [])
+        }
     }
     
     return useful_data
+
+async def decode_image(image: UploadFile = File(...)):
+    image_bytes = await image.read()
+    np_array = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+
+    if img is None:
+        raise HTTPException(status_code=400, detail="Invalid image file.")
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    barcodes = []
+    
+    # --- The Decoding Pipeline ---
+    
+    # 1. First attempt on the simple grayscale image
+    print("Attempt 1: Decoding raw grayscale image...")
+    barcodes = decode(gray)
+
+    # 2. If it fails, try with a dilated image (helps thin lines)
+    if not barcodes:
+        print("Attempt 2: Decoding dilated image...")
+        kernel = np.ones((3, 3), np.uint8)
+        dilated = cv2.dilate(gray, kernel, iterations=1)
+        barcodes = decode(dilated)
+
+    # 3. If it still fails, try with an eroded image (helps blurry/merged lines)
+    if not barcodes:
+        print("Attempt 3: Decoding eroded image...")
+        kernel = np.ones((3, 3), np.uint8)
+        eroded = cv2.erode(gray, kernel, iterations=1)
+        barcodes = decode(eroded)
+
+    # 4. If all attempts fail, then raise the error
+    if not barcodes:
+        raise HTTPException(status_code=400, detail="No barcode found after all processing attempts.")
+
+    print(f"✅ Success! Found barcode: {barcodes[0].data.decode('utf-8')}")
+    barcode_data = barcodes[0].data.decode('utf-8')
+
+    # ... The rest of your code to fetch from Open Food Facts and return data ...
+    
+    return barcode_data
