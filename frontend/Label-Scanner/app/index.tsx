@@ -6,13 +6,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HomePage() {
   const [username, setUsername] = useState("");
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleSubmit = () => {
     if (username.trim()) {
@@ -22,128 +26,146 @@ export default function HomePage() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Welcome Hero Card */}
-      <View style={styles.heroCard}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="nutrition" size={50} color="#059669" />
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      <ScrollView
+        style={[styles.container, { paddingTop: insets.top + 16 }]}
+        contentContainerStyle={{
+          paddingBottom: Math.max(insets.bottom, 20) + 80,
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Welcome Hero Card */}
+        <View style={styles.heroCard}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="nutrition" size={50} color="#059669" />
+          </View>
+          <Text style={styles.heroTitle}>Smart Health Scanner</Text>
+          <Text style={styles.heroSubtitle}>
+            Personalized food recommendations based on your blood test results
+          </Text>
         </View>
-        <Text style={styles.heroTitle}>Smart Health Scanner</Text>
-        <Text style={styles.heroSubtitle}>
-          Personalized food recommendations based on your blood test results
-        </Text>
-      </View>
 
-      {/* How It Works Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>🔬 How It Works</Text>
-        <View style={styles.stepContainer}>
-          <View style={styles.step}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>1</Text>
+        {/* How It Works Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🔬 How It Works</Text>
+          <View style={styles.stepContainer}>
+            <View style={styles.step}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>1</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Upload Blood Test</Text>
+                <Text style={styles.stepDescription}>
+                  Share your recent blood test results
+                </Text>
+              </View>
             </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Upload Blood Test</Text>
-              <Text style={styles.stepDescription}>
-                Share your recent blood test results
-              </Text>
-            </View>
-          </View>
 
-          <View style={styles.step}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>2</Text>
+            <View style={styles.step}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>2</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Scan Food Products</Text>
+                <Text style={styles.stepDescription}>
+                  Use barcode scanner on any food item
+                </Text>
+              </View>
             </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Scan Food Products</Text>
-              <Text style={styles.stepDescription}>
-                Use barcode scanner on any food item
-              </Text>
-            </View>
-          </View>
 
-          <View style={styles.step}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>3</Text>
+            <View style={styles.step}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>3</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Get Recommendations</Text>
+                <Text style={styles.stepDescription}>
+                  Receive personalized health advice
+                </Text>
+              </View>
             </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Get Recommendations</Text>
-              <Text style={styles.stepDescription}>
-                Receive personalized health advice
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Features Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>✨ Features</Text>
-        <View style={styles.featureList}>
-          <View style={styles.feature}>
-            <Ionicons name="medical" size={20} color="#3b82f6" />
-            <Text style={styles.featureText}>Blood test analysis</Text>
-          </View>
-          <View style={styles.feature}>
-            <Ionicons name="barcode" size={20} color="#3b82f6" />
-            <Text style={styles.featureText}>Barcode scanning</Text>
-          </View>
-          <View style={styles.feature}>
-            <Ionicons name="restaurant" size={20} color="#3b82f6" />
-            <Text style={styles.featureText}>Food compatibility check</Text>
-          </View>
-          <View style={styles.feature}>
-            <Ionicons name="heart" size={20} color="#3b82f6" />
-            <Text style={styles.featureText}>Health recommendations</Text>
           </View>
         </View>
-      </View>
 
-      {/* Get Started Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>🚀 Get Started</Text>
-        <Text style={styles.label}>Enter your name to begin:</Text>
+        {/* Features Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>✨ Features</Text>
+          <View style={styles.featureList}>
+            <View style={styles.feature}>
+              <Ionicons name="medical" size={20} color="#3b82f6" />
+              <Text style={styles.featureText}>Blood test analysis</Text>
+            </View>
+            <View style={styles.feature}>
+              <Ionicons name="barcode" size={20} color="#3b82f6" />
+              <Text style={styles.featureText}>Barcode scanning</Text>
+            </View>
+            <View style={styles.feature}>
+              <Ionicons name="restaurant" size={20} color="#3b82f6" />
+              <Text style={styles.featureText}>Food compatibility check</Text>
+            </View>
+            <View style={styles.feature}>
+              <Ionicons name="heart" size={20} color="#3b82f6" />
+              <Text style={styles.featureText}>Health recommendations</Text>
+            </View>
+          </View>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          value={username}
-          onChangeText={setUsername}
-          placeholder="Your name"
-          autoCapitalize="words"
-        />
+        {/* Get Started Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🚀 Get Started</Text>
+          <Text style={styles.label}>Enter your name to begin:</Text>
 
-        <TouchableOpacity
-          style={[styles.button, !username.trim() && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={!username.trim()}
-        >
-          <Ionicons
-            name="arrow-forward"
-            size={20}
-            color="white"
-            style={styles.buttonIcon}
+          <TextInput
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Your name"
+            autoCapitalize="words"
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
           />
-          <Text style={styles.buttonText}>Start Your Health Journey</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Disclaimer Card */}
-      <View style={styles.disclaimerCard}>
-        <Ionicons name="information-circle" size={20} color="#f59e0b" />
-        <Text style={styles.disclaimerText}>
-          This app provides general guidance only. Always consult healthcare
-          professionals for medical advice.
-        </Text>
-      </View>
-    </ScrollView>
+          <TouchableOpacity
+            style={[styles.button, !username.trim() && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={!username.trim()}
+          >
+            <Ionicons
+              name="arrow-forward"
+              size={20}
+              color="white"
+              style={styles.buttonIcon}
+            />
+            <Text style={styles.buttonText}>Start Your Health Journey</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Disclaimer Card */}
+        <View style={styles.disclaimerCard}>
+          <Ionicons name="information-circle" size={20} color="#f59e0b" />
+          <Text style={styles.disclaimerText}>
+            This app provides general guidance only. Always consult healthcare
+            professionals for medical advice.
+          </Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  keyboardAvoidingView: {
     flex: 1,
     backgroundColor: "#f8fafc",
-    padding: 16,
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
   heroCard: {
     backgroundColor: "white",

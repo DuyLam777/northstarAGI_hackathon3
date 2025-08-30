@@ -41,7 +41,6 @@ export default function MainPage() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
       quality: 0.8, // Optimize for upload
     });
 
@@ -63,7 +62,6 @@ export default function MainPage() {
 
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      aspect: [4, 3],
       quality: 0.8,
     });
 
@@ -344,8 +342,8 @@ export default function MainPage() {
               />
               <Text style={styles.statusText}>
                 {analysisResult.healthy
-                  ? "✅ Good for You!"
-                  : "❌ Not Recommended"}
+                  ? "It's Good for You!"
+                  : "Not Recommended"}
               </Text>
             </View>
           </View>

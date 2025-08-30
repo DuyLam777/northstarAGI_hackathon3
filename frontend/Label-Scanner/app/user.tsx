@@ -12,12 +12,14 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { uploadBloodTest } from "../services/api"; // Import the new API function
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function UserPage() {
   const [image, setImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -32,8 +34,6 @@ export default function UserPage() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
       quality: 0.8, // Slightly lower quality for faster upload
     });
 
@@ -56,7 +56,6 @@ export default function UserPage() {
 
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      aspect: [4, 3],
       quality: 0.8,
     });
 
@@ -125,7 +124,13 @@ export default function UserPage() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={[styles.container, { paddingTop: insets.top + 16 }]}
+      contentContainerStyle={{
+        paddingBottom: Math.max(insets.bottom, 20) + 60,
+      }}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Header Card */}
       <View style={styles.card}>
         <View style={styles.headerIcon}>
@@ -266,7 +271,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
-    padding: 16,
+    paddingHorizontal: 16,
   },
   card: {
     backgroundColor: "white",
@@ -341,6 +346,7 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 12,
     marginBottom: 12,
+    resizeMode: "contain", // Changed from default to maintain aspect ratio without cropping
   },
   previewText: {
     textAlign: "center",
