@@ -6,17 +6,16 @@ from pyzbar.pyzbar import decode
 import cv2
 import numpy as np
 import shutil
-from backend.file_processing import process_file
-import google as genai
+from file_processing import process_file
+from google import genai
 import os
 from pydantic import BaseModel
 import json
 import base64
 from dotenv import load_dotenv
+from google.genai import types
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
-
-print(os.getenv("GEMINI_API_KEY"))
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
@@ -81,7 +80,7 @@ class FoodData(BaseModel):
     product_name: str
     ingredients: str = None
     nutri_score: str = None
-    nutrients: list = None
+    nutrients: dict = None
 
 
 @app.post("/analyze-food")
@@ -132,7 +131,7 @@ Do not include any other text.
 """
 
     try:
-        # # Call Gemini
+        # Call Gemini
         # model = genai.GenerativeModel(
         #     model_name="gemini-2.5-flash",
         #     system_instruction=system_instruction.strip()
@@ -147,6 +146,9 @@ Do not include any other text.
 
         response = client.models.generate_content(
             model="gemini-2.5-flash",
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction
+            ),
             contents=[image, f"Here is the food item to evaluate:\n{food_json_str}"],
         )
 
@@ -176,34 +178,31 @@ async def scan_barcode_image(image: UploadFile = File(...)):
     barcode_data = await decode_image(image)
 
     product_data = await get_product_data(barcode_data)
-
-    print(barcode_data)
-
+    
     if not product_data:
         raise HTTPException(
             status_code=404, detail="Product data is empty for the scanned barcode."
         )
 
     nutriments = product_data.get("nutriments", {})
-
-    useful_data = {
-        "product_name": product_data.get("product_name_en")
-        or product_data.get("product_name"),
-        "brands": product_data.get("brands"),
-        "image_url": product_data.get("image_front_url"),
-        "ingredients": product_data.get("ingredients_text_en")
-        or product_data.get("ingredients_text"),
-        "nutriscore": product_data.get("nutriscore_grade"),
-        "nutriments": {
+    food_data_obj = FoodData(
+        product_name=product_data.get("product_name_en") or product_data.get("product_name"),
+        brands=product_data.get("brands"),
+        image_url=product_data.get("image_front_url"),
+        ingredients=product_data.get("ingredients_text_en") or product_data.get("ingredients_text"),
+        nutriscore=product_data.get("nutriscore_grade"),
+        nutrients={
             "sugars_100g": nutriments.get("sugars_100g"),
             "salt_100g": nutriments.get("salt_100g"),
             "fat_100g": nutriments.get("fat_100g"),
             "saturated_fat_100g": nutriments.get("saturated-fat_100g"),
-            "energy_kcal_100g": nutriments.get("energy-kcal_100g"),
-        },
-    }
+            "energy_kcal_100g": nutriments.get("energy-kcal_100g")
+        }
+    )
 
-    return useful_data
+    analyze_food_response = await analyze_food(food_data_obj)
+ 
+    return analyze_food_response
 
 
 async def decode_image(image: UploadFile = File(...)):
