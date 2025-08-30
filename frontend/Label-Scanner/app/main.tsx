@@ -14,10 +14,18 @@ import { useRouter } from "expo-router";
 import { analyzeBarcodeImage } from "../services/api"; // Import the barcode analysis function
 import { Ionicons } from "@expo/vector-icons";
 
+interface ProductInfo {
+  name: string;
+  brands: string;
+  image_url?: string;
+  nutri_score?: string;
+  barcode: string;
+}
+
 interface AnalysisResult {
-  healthy: boolean;
+  score: number; // 1-5 score from backend
   reasoning: string;
-  recommendation: string;
+  product_info: ProductInfo;
 }
 
 export default function MainPage() {
@@ -71,6 +79,49 @@ export default function MainPage() {
     }
   };
 
+  // Function to determine if product is good based on score
+  const isProductGood = (score: number): boolean => {
+    return score >= 3; // Score of 3, 4, or 5 is considered good
+  };
+
+  // Function to get health status text based on score
+  const getHealthStatusText = (score: number): string => {
+    switch (score) {
+      case 5:
+        return "Excellent Choice! ⭐";
+      case 4:
+        return "Good Choice! ✅";
+      case 3:
+        return "Neutral/Mixed Impact ⚖️";
+      case 2:
+        return "Not Ideal ⚠️";
+      case 1:
+        return "Avoid - Health Risk ❌";
+      default:
+        return "Unknown";
+    }
+  };
+
+  // Function to get appropriate colors based on score
+  const getScoreColors = (score: number) => {
+    if (score >= 4) {
+      return {
+        backgroundColor: "#059669", // Green
+        shadowColor: "#059669",
+      };
+    } else if (score === 3) {
+      return {
+        backgroundColor: "#d97706", // Orange
+        shadowColor: "#d97706",
+      };
+    } else {
+      return {
+        backgroundColor: "#dc2626", // Red
+        shadowColor: "#dc2626",
+      };
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!image) {
       Alert.alert(
@@ -89,9 +140,12 @@ export default function MainPage() {
       console.log("Analysis response:", response);
       setAnalysisResult(response);
 
+      const isGood = isProductGood(response.score);
+      const productName = response.product_info?.name || "Unknown Product";
+
       Alert.alert(
         "Analysis Complete! 🔬",
-        `Product ${response.healthy ? "is good" : "is not recommended"} for your health profile.`,
+        `${productName} ${isGood ? "is a good choice" : "is not recommended"} for your health profile.`,
         [{ text: "View Details", style: "default" }],
       );
     } catch (error) {
@@ -127,11 +181,16 @@ export default function MainPage() {
   // ========== TEMPORARY TEST FUNCTIONS - DELETE WHEN BACKEND IS READY ==========
   const simulateHealthyResult = () => {
     const mockHealthyResult: AnalysisResult = {
-      healthy: true,
+      score: 4,
       reasoning:
         "This product contains high levels of omega-3 fatty acids and low sodium content, which aligns well with your blood test results showing elevated cholesterol levels. The product's nutritional profile suggests it can help improve your cardiovascular health.",
-      recommendation:
-        "This product is recommended for your health profile! Consider incorporating similar omega-3 rich foods into your diet. Pair with leafy greens for optimal nutrient absorption.",
+      product_info: {
+        name: "Healthy Salmon Fillet",
+        brands: "Ocean Fresh",
+        nutri_score: "a",
+        barcode: "1234567890",
+        image_url: "https://example.com/salmon.jpg",
+      },
     };
 
     setAnalysisResult(mockHealthyResult);
@@ -140,11 +199,16 @@ export default function MainPage() {
 
   const simulateUnhealthyResult = () => {
     const mockUnhealthyResult: AnalysisResult = {
-      healthy: false,
+      score: 2,
       reasoning:
         "This product is high in saturated fats and sodium, which could be problematic given your blood test results showing elevated LDL cholesterol and borderline high blood pressure. The sugar content may also impact your glucose levels.",
-      recommendation:
-        "We recommend avoiding this product. Instead, try foods rich in fiber and lean proteins. Consider alternatives like grilled chicken, quinoa, or fresh vegetables to better support your health goals.",
+      product_info: {
+        name: "Coca-Cola",
+        brands: "Coca-Cola Company",
+        nutri_score: "e",
+        barcode: "54490000",
+        image_url: "https://example.com/coke.jpg",
+      },
     };
 
     setAnalysisResult(mockUnhealthyResult);
@@ -152,13 +216,13 @@ export default function MainPage() {
   };
   // ========== END TEMPORARY TEST FUNCTIONS ==========
 
-  // Get the local GIF asset
-  const getGifSource = (healthy: boolean) => {
-    if (healthy) {
-      // Good/Yes GIF - horse nodding
+  // Get the local GIF asset based on score
+  const getGifSource = (score: number) => {
+    if (score >= 3) {
+      // Good/Yes GIF - horse nodding (score 3, 4, 5)
       return require("../assets/horse-nodding.gif");
     } else {
-      // Bad/No GIF - horse shaking head
+      // Bad/No GIF - horse shaking head (score 1, 2)
       return require("../assets/horse-shaking.gif");
     }
   };
@@ -316,10 +380,50 @@ export default function MainPage() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🧬 Health Analysis Results</Text>
 
+          {/* Product Information */}
+          <View style={styles.productInfoContainer}>
+            <View style={styles.productHeader}>
+              {analysisResult.product_info?.image_url && (
+                <Image
+                  source={{ uri: analysisResult.product_info.image_url }}
+                  style={styles.productImage}
+                  contentFit="cover"
+                />
+              )}
+              <View style={styles.productDetails}>
+                <Text style={styles.productName}>
+                  {analysisResult.product_info?.name || "Unknown Product"}
+                </Text>
+                <Text style={styles.brandName}>
+                  {analysisResult.product_info?.brands || "Unknown Brand"}
+                </Text>
+                {analysisResult.product_info?.nutri_score && (
+                  <View style={styles.nutriScoreContainer}>
+                    <Text style={styles.nutriScoreLabel}>Nutri-Score: </Text>
+                    <View
+                      style={[
+                        styles.nutriScoreBadge,
+                        {
+                          backgroundColor: getNutriScoreColor(
+                            analysisResult.product_info.nutri_score,
+                          ),
+                        },
+                      ]}
+                    >
+                      <Text style={styles.nutriScoreText}>
+                        {analysisResult.product_info.nutri_score.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+
           {/* Health Status with Local GIF */}
           <View style={styles.resultContainer}>
             <Image
-              source={getGifSource(analysisResult.healthy)}
+              source={getGifSource(analysisResult.score)}
               style={styles.resultGif}
               contentFit="contain"
             />
@@ -327,23 +431,15 @@ export default function MainPage() {
             <View
               style={[
                 styles.healthStatus,
-                analysisResult.healthy
-                  ? styles.healthyStatus
-                  : styles.unhealthyStatus,
+                getScoreColors(analysisResult.score),
               ]}
             >
-              <Ionicons
-                name={
-                  analysisResult.healthy ? "checkmark-circle" : "close-circle"
-                }
-                size={24}
-                color="white"
-                style={styles.statusIcon}
-              />
+              <View style={styles.scoreContainer}>
+                <Text style={styles.scoreNumber}>{analysisResult.score}</Text>
+                <Text style={styles.scoreOutOf}>/5</Text>
+              </View>
               <Text style={styles.statusText}>
-                {analysisResult.healthy
-                  ? "It's Good for You!"
-                  : "Not Recommended"}
+                {getHealthStatusText(analysisResult.score)}
               </Text>
             </View>
           </View>
@@ -352,14 +448,6 @@ export default function MainPage() {
           <View style={styles.reasoningContainer}>
             <Text style={styles.sectionTitle}>🔍 Analysis</Text>
             <Text style={styles.reasoningText}>{analysisResult.reasoning}</Text>
-          </View>
-
-          {/* Recommendations */}
-          <View style={styles.recommendationContainer}>
-            <Text style={styles.sectionTitle}>💡 Recommendations</Text>
-            <Text style={styles.recommendationText}>
-              {analysisResult.recommendation}
-            </Text>
           </View>
 
           {/* Action Buttons */}
@@ -395,6 +483,24 @@ export default function MainPage() {
     </ScrollView>
   );
 }
+
+// Helper function to get nutri-score color
+const getNutriScoreColor = (score: string): string => {
+  switch (score.toLowerCase()) {
+    case "a":
+      return "#2dd4bf"; // Teal
+    case "b":
+      return "#84cc16"; // Lime
+    case "c":
+      return "#f59e0b"; // Amber
+    case "d":
+      return "#f97316"; // Orange
+    case "e":
+      return "#ef4444"; // Red
+    default:
+      return "#6b7280"; // Gray
+  }
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -518,13 +624,67 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
   },
+
+  // New Product Info Styles
+  productInfoContainer: {
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  productHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: "#f3f4f6",
+  },
+  productDetails: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1f2937",
+    marginBottom: 4,
+  },
+  brandName: {
+    fontSize: 16,
+    color: "#6b7280",
+    marginBottom: 8,
+  },
+  nutriScoreContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  nutriScoreLabel: {
+    fontSize: 14,
+    color: "#4b5563",
+  },
+  nutriScoreBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  nutriScoreText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+
   resultContainer: {
     alignItems: "center",
     marginBottom: 20,
   },
   resultGif: {
-    width: 150,
-    height: 150,
+    width: 120,
+    height: 120,
     borderRadius: 12,
     marginBottom: 16,
   },
@@ -541,33 +701,37 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+    minWidth: 200,
+    justifyContent: "center",
   },
-  healthyStatus: {
-    backgroundColor: "#059669",
-    shadowColor: "#059669",
+  scoreContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginRight: 12,
   },
-  unhealthyStatus: {
-    backgroundColor: "#dc2626",
-    shadowColor: "#dc2626",
+  scoreNumber: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "white",
   },
-  statusIcon: {
-    marginRight: 8,
+  scoreOutOf: {
+    fontSize: 16,
+    color: "white",
+    marginLeft: 2,
   },
   statusText: {
     color: "white",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
+    textAlign: "center",
   },
   reasoningContainer: {
     marginBottom: 20,
-  },
-  recommendationContainer: {
-    backgroundColor: "#f0f9ff",
     padding: 16,
+    backgroundColor: "#fefefe",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#0ea5e9",
-    marginBottom: 20,
+    borderColor: "#e5e7eb",
   },
   sectionTitle: {
     fontSize: 16,
@@ -579,12 +743,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#4b5563",
     lineHeight: 22,
-  },
-  recommendationText: {
-    fontSize: 15,
-    color: "#0c4a6e",
-    lineHeight: 22,
-    fontWeight: "500",
   },
   actionButtonsContainer: {
     flexDirection: "row",

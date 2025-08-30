@@ -32,7 +32,7 @@ export default function HomePage() {
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <ScrollView
-        style={[styles.container, { paddingTop: insets.top + 16 }]}
+        style={[styles.container, { paddingTop: insets.top }]}
         contentContainerStyle={{
           paddingBottom: Math.max(insets.bottom, 20) + 80,
         }}
