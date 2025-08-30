@@ -14,37 +14,40 @@ import json
 import base64
 from dotenv import load_dotenv
 
-
-
-# Load the .env file from the parent directory
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 print(os.getenv("GEMINI_API_KEY"))
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
-
 app = FastAPI()
+
 
 # This helper function remains the same
 async def get_product_data(barcode: str):
     api_url = f"https://world.openfoodfacts.net/api/v2/product/{barcode}.json"
     async with httpx.AsyncClient() as client:
-        response = await client.get(api_url, auth=('off', 'off'))
-        
+        response = await client.get(api_url, auth=("off", "off"))
+
         if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Product not found or API error.")
-            
+            raise HTTPException(
+                status_code=response.status_code,
+                detail="Product not found or API error.",
+            )
+
         data = response.json()
-        
+
         if data.get("status") == 0:
-            raise HTTPException(status_code=404, detail=f"Product with barcode {barcode} not found.")
-            
+            raise HTTPException(
+                status_code=404, detail=f"Product with barcode {barcode} not found."
+            )
+
         return data.get("product")
-    
 
     # NEW ENDPOINT: This one accepts a file upload (and converts it to Base64)
+
+
 @app.post("/uploadfile/")
 async def create_upload_file(file: UploadFile = File(...)):
     print(f"Received file: {file.filename}")
@@ -53,11 +56,11 @@ async def create_upload_file(file: UploadFile = File(...)):
     try:
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        
+
         print("File saved to temporary path.")
         processed_file_path = process_file(temp_path)
         print(f"Processed file path: {processed_file_path}")
-        
+
         if processed_file_path:
             return {"filepath": processed_file_path}
         else:
@@ -68,12 +71,11 @@ async def create_upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
 
-
-
 # --- Main endpoint: Analyze Food Based on Bloodwork + Food ---
 
 # --- Mock storage for lab results (replace with session/db later) ---
 user_lab_results = {}
+
 
 class FoodData(BaseModel):
     product_name: str
@@ -86,13 +88,13 @@ class FoodData(BaseModel):
 async def analyze_food(food_data: FoodData):
     b64_file_path = "../bloodwork_converted/bloodwork_converted.b64"
     if not os.path.exists(b64_file_path):
-            raise HTTPException(status_code=400, detail="No bloodwork uploaded yet")
+        raise HTTPException(status_code=400, detail="No bloodwork uploaded yet")
 
     try:
         with open(b64_file_path, "r") as f:
             base64_str = f.read().strip()
     except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to read .b64 file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to read .b64 file: {e}")
 
     try:
         # Decode base64 string to bytes
@@ -101,8 +103,9 @@ async def analyze_food(food_data: FoodData):
         image = Image.open(io.BytesIO(image_data))
         user_lab_results["latest"] = image
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to decode image from .b64: {e}")
-    
+        raise HTTPException(
+            status_code=500, detail=f"Failed to decode image from .b64: {e}"
+        )
 
     # Prepare food context
     food_json_str = json.dumps(food_data.dict(), indent=2)
@@ -129,17 +132,22 @@ Do not include any other text.
 """
 
     try:
-        # Call Gemini
-        model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
-            system_instruction=system_instruction.strip()
-        )
+        # # Call Gemini
+        # model = genai.GenerativeModel(
+        #     model_name="gemini-2.5-flash",
+        #     system_instruction=system_instruction.strip()
+        # )
 
-        response = model.generate_content(
-            contents=[
-                image,
-                f"Here is the food item to evaluate:\n{food_json_str}"
-            ]
+        # response = model.generate_content(
+        #     contents=[
+        #         image,
+        #         f"Here is the food item to evaluate:\n{food_json_str}"
+        #     ]
+        # )
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[image, f"Here is the food item to evaluate:\n{food_json_str}"],
         )
 
         if not response.text:
@@ -155,12 +163,11 @@ Do not include any other text.
         except Exception as e:
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to parse Gemini JSON: {e}. Raw output: {text}"
+                detail=f"Failed to parse Gemini JSON: {e}. Raw output: {text}",
             )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gemini API error: {str(e)}")
-
 
 
 # NEW ENDPOINT: This one accepts an image file upload
@@ -171,28 +178,33 @@ async def scan_barcode_image(image: UploadFile = File(...)):
     product_data = await get_product_data(barcode_data)
 
     print(barcode_data)
-    
+
     if not product_data:
-        raise HTTPException(status_code=404, detail="Product data is empty for the scanned barcode.")
+        raise HTTPException(
+            status_code=404, detail="Product data is empty for the scanned barcode."
+        )
 
     nutriments = product_data.get("nutriments", {})
-    
+
     useful_data = {
-        "product_name": product_data.get("product_name_en") or product_data.get("product_name"),
+        "product_name": product_data.get("product_name_en")
+        or product_data.get("product_name"),
         "brands": product_data.get("brands"),
         "image_url": product_data.get("image_front_url"),
-        "ingredients": product_data.get("ingredients_text_en") or product_data.get("ingredients_text"),
+        "ingredients": product_data.get("ingredients_text_en")
+        or product_data.get("ingredients_text"),
         "nutriscore": product_data.get("nutriscore_grade"),
         "nutriments": {
             "sugars_100g": nutriments.get("sugars_100g"),
             "salt_100g": nutriments.get("salt_100g"),
             "fat_100g": nutriments.get("fat_100g"),
             "saturated_fat_100g": nutriments.get("saturated-fat_100g"),
-            "energy_kcal_100g": nutriments.get("energy-kcal_100g")
-        }
+            "energy_kcal_100g": nutriments.get("energy-kcal_100g"),
+        },
     }
-    
+
     return useful_data
+
 
 async def decode_image(image: UploadFile = File(...)):
     image_bytes = await image.read()
@@ -204,9 +216,9 @@ async def decode_image(image: UploadFile = File(...)):
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     barcodes = []
-    
+
     # --- The Decoding Pipeline ---
-    
+
     # 1. First attempt on the simple grayscale image
     print("Attempt 1: Decoding raw grayscale image...")
     barcodes = decode(gray)
@@ -227,11 +239,13 @@ async def decode_image(image: UploadFile = File(...)):
 
     # 4. If all attempts fail, then raise the error
     if not barcodes:
-        raise HTTPException(status_code=400, detail="No barcode found after all processing attempts.")
+        raise HTTPException(
+            status_code=400, detail="No barcode found after all processing attempts."
+        )
 
     print(f"✅ Success! Found barcode: {barcodes[0].data.decode('utf-8')}")
-    barcode_data = barcodes[0].data.decode('utf-8')
+    barcode_data = barcodes[0].data.decode("utf-8")
 
     # ... The rest of your code to fetch from Open Food Facts and return data ...
-    
+
     return barcode_data
