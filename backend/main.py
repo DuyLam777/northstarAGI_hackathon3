@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import shutil
 from file_processing import process_file
-import google as genai
+from google import genai
 import os
 from pydantic import BaseModel
 import json
@@ -15,8 +15,6 @@ import base64
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
-
-print(os.getenv("GEMINI_API_KEY"))
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
@@ -132,18 +130,18 @@ Do not include any other text.
 """
 
     try:
-        # # Call Gemini
-        # model = genai.GenerativeModel(
-        #     model_name="gemini-2.5-flash",
-        #     system_instruction=system_instruction.strip()
-        # )
+        # Call Gemini
+        model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash",
+            system_instruction=system_instruction.strip()
+        )
 
-        # response = model.generate_content(
-        #     contents=[
-        #         image,
-        #         f"Here is the food item to evaluate:\n{food_json_str}"
-        #     ]
-        # )
+        response = model.generate_content(
+            contents=[
+                image,
+                f"Here is the food item to evaluate:\n{food_json_str}"
+            ]
+        )
 
         response = client.models.generate_content(
             model="gemini-2.5-flash",
