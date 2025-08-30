@@ -1,0 +1,53 @@
+{
+	"info": {
+		"_postman_id": "20047079-7a5f-42e4-b9e2-267f3366662f",
+		"name": "label scanner",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "33798886"
+	},
+	"item": [
+		{
+			"name": "New Request",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "http://127.0.0.1:8000/scan",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "image",
+							"type": "file",
+							"src": "/home/tharlo/Pictures/cruesli.png"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8000/scan",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"scan"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
