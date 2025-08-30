@@ -5,6 +5,15 @@ from PIL import Image
 from pyzbar.pyzbar import decode
 import cv2
 import numpy as np
+import shutil
+from file_processing import process_file
+import google as genai
+import os
+from pydantic import BaseModel
+import json
+
+
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 app = FastAPI()
 
@@ -23,6 +32,111 @@ async def get_product_data(barcode: str):
             raise HTTPException(status_code=404, detail=f"Product with barcode {barcode} not found.")
             
         return data.get("product")
+    
+
+    # NEW ENDPOINT: This one accepts a file upload (and converts it to Base64)
+@app.post("/uploadfile/")
+async def create_upload_file(file: UploadFile = File(...)):
+    print(f"Received file: {file.filename}")
+    temp_path = f"/tmp/{file.filename}"
+    print(f"Saving to temporary path: {temp_path}")
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        print("File saved to temporary path.")
+        processed_file_path = process_file(temp_path)
+        print(f"Processed file path: {processed_file_path}")
+        
+        if processed_file_path:
+            return {"filepath": processed_file_path}
+        else:
+            print("File processing failed: Invalid file type.")
+            raise HTTPException(status_code=400, detail="Invalid file type")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+
+
+
+
+# --- Main endpoint: Analyze Food Based on Bloodwork + Food ---
+
+# --- Mock storage for lab results (replace with session/db later) ---
+user_lab_results = {}
+
+class FoodData(BaseModel):
+    product_name: str
+    ingredients: str = None
+    nutri_score: str = None
+    nutrients: list = None
+
+
+@app.post("/analyze-food")
+async def analyze_food(food_data: FoodData):
+    if "latest" not in user_lab_results:
+        raise HTTPException(status_code=400, detail="No bloodwork uploaded yet")
+
+    image = user_lab_results["latest"]
+
+    # Prepare food context
+    food_json_str = json.dumps(food_data.dict(), indent=2)
+
+    # Define system instruction
+    system_instruction = """
+You are a personalized AI nutritionist. You analyze a person's blood test results and food items to give a health suitability score from 1 to 5:
+- 5: Excellent choice based on their labs
+- 4: Good, minor concerns
+- 3: Neutral or mixed impact
+- 2: Not ideal, potential risk
+- 1: Avoid — conflicts with health markers
+
+Consider:
+- High LDL? → flag saturated fat
+- Prediabetic? → flag sugar
+- Low vitamin D? → bonus for fortified foods
+- High uric acid? → avoid high-purine foods
+
+Always be scientific, concise, and empathetic.
+Return ONLY a JSON object:
+{"score": 3, "reasoning": "Your LDL is elevated..."}
+Do not include any other text.
+"""
+
+    try:
+        # Call Gemini
+        model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash",
+            system_instruction=system_instruction.strip()
+        )
+
+        response = model.generate_content(
+            contents=[
+                image,
+                f"Here is the food item to evaluate:\n{food_json_str}"
+            ]
+        )
+
+        if not response.text:
+            raise HTTPException(status_code=500, detail="Empty response from Gemini")
+
+        # Try to extract JSON from response
+        text = response.text.strip()
+        try:
+            start = text.find("{")
+            end = text.rfind("}") + 1
+            result = json.loads(text[start:end])
+            return result
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to parse Gemini JSON: {e}. Raw output: {text}"
+            )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gemini API error: {str(e)}")
+
+
 
 # NEW ENDPOINT: This one accepts an image file upload
 @app.post("/scan")
