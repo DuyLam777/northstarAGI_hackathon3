@@ -144,30 +144,29 @@ async def scan_barcode_image(image: UploadFile = File(...)):
     barcode_data = await decode_image(image)
 
     product_data = await get_product_data(barcode_data)
-
-    print(barcode_data)
     
     if not product_data:
         raise HTTPException(status_code=404, detail="Product data is empty for the scanned barcode.")
 
     nutriments = product_data.get("nutriments", {})
-    
-    useful_data = {
-        "product_name": product_data.get("product_name_en") or product_data.get("product_name"),
-        "brands": product_data.get("brands"),
-        "image_url": product_data.get("image_front_url"),
-        "ingredients": product_data.get("ingredients_text_en") or product_data.get("ingredients_text"),
-        "nutriscore": product_data.get("nutriscore_grade"),
-        "nutriments": {
+    food_data_obj = FoodData(
+        product_name=product_data.get("product_name_en") or product_data.get("product_name"),
+        brands=product_data.get("brands"),
+        image_url=product_data.get("image_front_url"),
+        ingredients=product_data.get("ingredients_text_en") or product_data.get("ingredients_text"),
+        nutriscore=product_data.get("nutriscore_grade"),
+        nutrients={
             "sugars_100g": nutriments.get("sugars_100g"),
             "salt_100g": nutriments.get("salt_100g"),
             "fat_100g": nutriments.get("fat_100g"),
             "saturated_fat_100g": nutriments.get("saturated-fat_100g"),
             "energy_kcal_100g": nutriments.get("energy-kcal_100g")
         }
-    }
-    
-    return useful_data
+    )
+
+    analyze_food_response = await analyze_food(food_data_obj)
+ 
+    return analyze_food_response
 
 async def decode_image(image: UploadFile = File(...)):
     image_bytes = await image.read()
