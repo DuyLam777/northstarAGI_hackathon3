@@ -12,9 +12,18 @@ import os
 from pydantic import BaseModel
 import json
 import base64
+from dotenv import load_dotenv
 
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# Load the .env file from the parent directory
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+print(os.getenv("GEMINI_API_KEY"))
+
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+
 
 app = FastAPI()
 
