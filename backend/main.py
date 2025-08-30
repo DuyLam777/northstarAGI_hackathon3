@@ -6,7 +6,7 @@ from pyzbar.pyzbar import decode
 import cv2
 import numpy as np
 import shutil
-from file_processing import process_file
+from backend.file_processing import process_file
 import google as genai
 import os
 from pydantic import BaseModel
