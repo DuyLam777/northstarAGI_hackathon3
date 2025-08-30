@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://0.0.0.0:8000"; // Replace with your actual API URL
+const API_BASE_URL = "http://192.168.124.124:8000"; // Replace with your actual API URL
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -93,7 +93,7 @@ export const uploadBloodTestFetch = async (imageUri: string): Promise<any> => {
   }
 };
 
-// For barcode analysis (if needed)
+// For barcode analysis
 export const analyzeBarcodeImage = async (
   imageUri: string,
 ): Promise<{
@@ -114,10 +114,31 @@ export const analyzeBarcodeImage = async (
       name: filename,
     } as any);
 
-    const response = await apiClient.post("/analyze-barcode/", formData);
+    console.log("Analyzing barcode image...");
+
+    // Using the same uploadfile endpoint for barcode analysis
+    // You might want to use a different endpoint like '/analyze-barcode/' if your backend supports it
+    const response = await apiClient.post("/uploadfile/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    console.log("Barcode analysis successful:", response.data);
     return response.data;
   } catch (error) {
     console.error("Barcode analysis failed:", error);
-    throw error;
+
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        throw new Error(
+          `Analysis failed: ${error.response.data?.message || error.response.statusText}`,
+        );
+      } else if (error.request) {
+        throw new Error("Network error: Please check your internet connection");
+      }
+    }
+
+    throw new Error("Analysis failed: Please try again");
   }
 };
