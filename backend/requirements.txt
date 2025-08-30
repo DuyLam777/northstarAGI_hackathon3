@@ -35,6 +35,9 @@ typer==0.16.1
 typing-inspection==0.4.1
 typing_extensions==4.15.0
 urllib3==2.5.0
+Pillow==11.3.0
+PyPDF2==3.0.1
+python-magic==0.4.27
 uvicorn==0.35.0
 uvloop==0.21.0
 watchfiles==1.1.0
